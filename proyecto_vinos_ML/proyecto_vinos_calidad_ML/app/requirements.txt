@@ -1,7 +1,0 @@
-Librerias necesarias :
-
-- Pandas
-- Numpy
-- Sklearn
-- Seaborn
-- Matplotlib
