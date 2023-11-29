@@ -2,9 +2,9 @@ import streamlit as st
 import pickle
 import pandas as pd
 
-with open('../models/trained_model_reg_2GBR.pkl', 'rb') as gbr :
+# Carga tus modelos aquí (reemplaza las rutas con las correctas)
+with open('../models/trained_model_reg_2GBR.pkl', 'rb') as gbr:
     gbr_model = pickle.load(gbr)
-
 with open('../models/trained_model_reg_1DTR.pkl', 'rb') as dt :
     dt_model = pickle.load(dt)
 
@@ -23,10 +23,115 @@ with open('../models/trained_model_reg_6PCA.pkl', 'rb') as pca :
 with open('../models/trained_model_reg_7PCAGB.pkl', 'rb') as pcagb :
     pcagb_model = pickle.load(pcagb)
 
+def add_logo():
+    main_bg = "../docs/copas.jpg"
+    st.markdown(
+    f"""
+    <style>
+        .reportview-container {{
+            background: url({main_bg}) no-repeat center center fixed;
+            background-size: cover;
+            background-color: #6f0000;  /* Rojo vino tinto */
+        }}
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
+def show_procesamiento():
+     
+    st.sidebar.title("Menú")
+    submenu = st.sidebar.radio("Selecciona un submenú:", ["Gráficas", "Código"])
 
-def main():
-    st.title('Modelo de Regresion Proyecto Vino Calidad')
+    
+    st.title("Página de Procesamiento de Datos")
+    if submenu == "Gráficas":
+        st.image("../docs/fotos_vino/terget.jpg", caption="Variación del target")
+        st.image("../docs/fotos_vino/matriz.jpg", caption="Variacion del heatmap")
+        st.image("../docs/fotos_vino/boxplot_cali_alc.png", caption="Correlacion calidad - Alcohol")
+        st.image("../docs/fotos_vino/histograma.png", caption="Histograma variables")
+    elif submenu == "Código":
+            st.text("Limpieza de outliers")
+            st.code("""
+                    df = df[df['total sulfur dioxide'] < 300] 
+                    df = df[df['free sulfur dioxide'] < 120] 
+                    df = df[df['residual sugar'] < 50]
+                    """)
+            st.text("Creacion de nuevas variables")
+            st.code("""
+                    df['type_num'] = df['type'].map({'white': 1, 'red': 2})
+                    
+                    # Calculamos la media de 'alcohol' asociada a cada valor de 'residual sugar'
+                    med_alc_sug = df.groupby('residual sugar')['alcohol'].mean()
+                    df['alc-sug'] = df['residual sugar'].map(med_alc_sug)
+                    
+                    # Calculamos la media de 'Quality' asociada a cada valor de 'residual sugar'
+                    med_qua_sug = df.groupby('residual sugar')['quality'].mean()
+                    df['qua-sug'] = df['residual sugar'].map(med_qua_sug)
+                    
+                    # Calculamos la media de 'volatile acidity' asociada a cada valor de 'type_num'
+                    med_chlo_aci= df.groupby('type_num')['volatile acidity'].mean()
+                    df['aci-type'] = df['type_num'].map(med_qua_sug)
+                    """)
+    
+    
+
+def show_entrenamiento():
+    
+    st.write("Página de Entrenamiento")
+    st.sidebar.title("Menú")
+    submenu = st.sidebar.radio("Selecciona un submenú:", ["Gráficas", "Código"])
+
+    st.title("Página de Procesamiento de Datos")
+    if submenu == "Gráficas":
+        st.image("../docs/fotos_vino/1dtr.png", caption="Resultados Decission Tree")
+        st.image("../docs/fotos_vino/2gbr.png", caption="Resultados Gradient Boosting")
+        st.image("../docs/fotos_vino/3RFR.png", caption="Resultados Random Forest")
+        st.image("../docs/fotos_vino/4LASSO.png", caption="Resultados LASSO")
+        st.image("../docs/fotos_vino/5SVC.png", caption="Resultados SVC")
+        st.image("../docs/fotos_vino/6PCA.png", caption="Resultados PCA + Random forest")
+        st.image("../docs/fotos_vino/7PCAGBGRAF.png", caption="Resultados PCA + Gradient Boosting")
+    elif submenu == "Código":
+            st.text("Equilibrado del target")
+            st.code("""
+                    train = pd.read_csv('../data/train.csv')
+                    X = train.drop(columns=['quality'])  
+                    y = train['quality']  
+                    oversampler = RandomOverSampler(random_state=42)
+                    X_resampled, y_resampled = oversampler.fit_resample(X, y)
+                    df_balanced = pd.concat([X_resampled, y_resampled], axis=1)
+                    """)
+            st.text("Busqueda de modelo e hiperparametrización")
+            st.code("""
+                    pipe2 = Pipeline([
+                    ('scaler', StandardScaler()),  
+                    ('gb', GradientBoostingRegressor())  
+                    ])
+                    param2 = {
+                        'gb__n_estimators': [50, 100, 200],
+                        'gb__learning_rate': [ 0.2, 0.5, 1],
+                        'gb__max_depth': [3, 4, 5,6]
+                    }
+                    gb_gs = GridSearchCV(pipe2, param2, cv=10, scoring='neg_mean_absolute_error', n_jobs=-1)
+                    gb_gs.fit(X_train, y_train)
+                    best_model2 = gb_gs.best_estimator_
+                    """)
+            st.text("Obtención de resultados")
+            st.code("""
+                    mae = mean_absolute_error(y_test, y_pred2)
+                    mape = np.mean(np.abs((y_test - y_pred2) / y_test)) * 100
+                    mse = mean_squared_error(y_test, y_pred2)
+                    rmse = np.sqrt(mse)
+
+                    print(f'Mean Absolute Error (MAE): {mae}')
+                    print(f'Mean Absolute Percentage Error (MAPE): {mape}%')
+                    print(f'Mean Squared Error (MSE): {mse}')
+                    print(f'Root Mean Squared Error (RMSE): {rmse}')
+                    """)
+            st.image("../docs/fotos_vino/2rgbMAE2.png", caption="Resultados Gradient Boosting")
+def show_comprobador():
+    
+    st.write("Página de Comprobador")
 
     st.sidebar.header('User input parameters')
 
@@ -58,7 +163,7 @@ def main():
     df = user_input_parameters()
 
     opcion = ['Decission Tree Regression', 'Gradiant Boosting Regression', 'Random Forest Regression', 'Lasso', 'SVC', 'PCA + RF', 'PCA + GB']
-    model= st.sidebar.selectbox('Que modelo quieres practicar?', opcion)
+    model= st.selectbox('Que modelo quieres practicar?', opcion)
     
     st.subheader('Parametros seleccionados')
     st.subheader(model)
@@ -78,6 +183,24 @@ def main():
             st.success((pca_model.predict(df)))
         elif model == 'PCA + GB' : 
             st.success((pcagb_model.predict(df)))
+    
 
-if __name__ == '__main__':
+def main():
+    add_logo()
+
+    st.title('Modelo de Regresión Proyecto Vino Calidad')
+
+    menu_option = st.sidebar.selectbox("Menú", ["Inicio", "Procesamiento", "Entrenamiento", "Comprobador"])
+
+    if menu_option == "Inicio":
+        # Muestra la imagen de inicio
+        st.image("../docs/copas.jpg", use_column_width=True)
+    elif menu_option == "Procesamiento":
+        show_procesamiento()
+    elif menu_option == "Entrenamiento":
+        show_entrenamiento()
+    elif menu_option == "Comprobador":
+        show_comprobador()
+
+if __name__ == "__main__":
     main()
