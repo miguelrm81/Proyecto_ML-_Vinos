@@ -1,0 +1,8 @@
+model:
+  name: GradientBoostingRegressor
+  parameters:
+    learning_rate: 0.5
+    max_depth: 6
+    n_estimators: 200
+preprocessing:
+  - name: StandardScaler
